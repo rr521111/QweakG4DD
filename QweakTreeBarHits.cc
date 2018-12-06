@@ -19,8 +19,14 @@ float angX,angY,angXi,angYi;
 float xi,yi,zi;
 float polT,polTi;
 double asymPM,asymPP;
+float polXraw,polYraw,polZraw,PolMag,polX,polY,polZ;
+float polXiraw,polYiraw,polZiraw,PoliMag,polXi,polYi,polZi;
+float momXi,momYi,momZi,momX,momY,momZ,MomMag;
+float ScatterXraw,ScatterYraw,ScatterZraw,ScatterMag,ScatX,ScatY,ScatZ;
+float SpinXraw,SpinYraw,SpinZraw,SpinMag,SpinX,SpinY,SpinZ;
+float theta2,phi2sgn,phi2;
 int fixedPos(0);
-std::vector<double> xI,yI,zI,aXi,aYi,polI;
+std::vector<double> xI,yI,zI,aXi,aYi,polXI,polYI,polZI,polI;
 
 void findInt(std::vector<int> &inter,std::vector<int> &val, int trackID,int parent, int &hasPar, int &nInt);
 void processOne(TTree *QweakSimG4_Tree,TTree *tout, long &nrEvts);
@@ -53,14 +59,23 @@ int main(int argc, char** argv){
   tout->Branch("angX",&angX,"angX/F");
   tout->Branch("angY",&angY,"angY/F");
   tout->Branch("polT",&polT,"polT/F");
+  //tout->Branch("polXraw",&polXraw,"polXraw/F");	// comment us!
+  //tout->Branch("polYraw",&polYraw,"polYraw/F");	//
+  //tout->Branch("polZraw",&polZraw,"polZraw/F");	//
+  //tout->Branch("MomMag",&MomMag,"MomMag/F");		//
   tout->Branch("xi",&xi,"xi/F");
   tout->Branch("yi",&yi,"yi/F");
   tout->Branch("zi",&zi,"zi/F");
   tout->Branch("angXi",&angXi,"angXi/F");
   tout->Branch("angYi",&angYi,"angYi/F");
+  //tout->Branch("polXiraw",&polXiraw,"polXiraw/F");	//
+  //tout->Branch("polYiraw",&polYiraw,"polYiraw/F");	//
+  //tout->Branch("polZiraw",&polZiraw,"polZiraw/F");	//
   tout->Branch("polTi",&polTi,"polTi/F");
   tout->Branch("asymPM",&asymPM,"asymPM/D");
   tout->Branch("asymPP",&asymPP,"asymPP/D");
+  tout->Branch("theta2",&theta2,"theta2/F");
+  tout->Branch("phi2",&phi2,"phi2/F");
   
   long totEv=0;
   long simEvts(0);
@@ -147,6 +162,16 @@ void processOne(TTree *QweakSimG4_Tree, TTree *tout, long &nrEvts){
       zi=zI[nThrown];
       angXi=aXi[nThrown];
       angYi=aYi[nThrown];
+      polXiraw=polXI[nThrown];
+      polYiraw=polYI[nThrown];
+      polZiraw=polZI[nThrown];
+      PoliMag=sqrt(polXI[nThrown]*polXI[nThrown]+polYI[nThrown]*polYI[nThrown]+polZI[nThrown]*polZI[nThrown]);
+      polXi=polXiraw/PoliMag;
+      polYi=polYiraw/PoliMag;
+      polZi=polZiraw/PoliMag;
+      momXi=tan(angXi*pi/180.0)/sqrt(1 + tan(angXi*pi/180.0)*tan(angXi*pi/180.0) + tan(angYi*pi/180.0)*tan(angYi*pi/180.0));
+      momYi=tan(angYi*pi/180.0)/sqrt(1 + tan(angXi*pi/180.0)*tan(angXi*pi/180.0) + tan(angYi*pi/180.0)*tan(angYi*pi/180.0));
+      momZi=1/sqrt(1 + tan(angXi*pi/180.0)*tan(angXi*pi/180.0) + tan(angYi*pi/180.0)*tan(angYi*pi/180.0));
       polTi=polI[nThrown];
     }else{
       xi=0.;
@@ -175,15 +200,25 @@ void processOne(TTree *QweakSimG4_Tree, TTree *tout, long &nrEvts){
 
       primary=0;
       if(tID==1 && parentID==0) primary=1;
-      double polX=event->Cerenkov.Detector.GetPolarizationX()[hit];
-      double polY=event->Cerenkov.Detector.GetPolarizationY()[hit];      
-      double polZ=event->Cerenkov.Detector.GetPolarizationZ()[hit];
-      G4ThreeVector pol(polX,polY,polZ);
-      G4ThreeVector mom(event->Cerenkov.Detector.GetLocalMomentumX()[hit],
-			event->Cerenkov.Detector.GetLocalMomentumY()[hit],
-			event->Cerenkov.Detector.GetLocalMomentumZ()[hit]);
+      G4ThreeVector pol(event->Cerenkov.Detector.GetPolarizationX()[hit],
+			event->Cerenkov.Detector.GetPolarizationY()[hit],
+			event->Cerenkov.Detector.GetPolarizationZ()[hit]);
+
+      G4ThreeVector mom(event->Cerenkov.Detector.GetGlobalMomentumX()[hit],
+			event->Cerenkov.Detector.GetGlobalMomentumY()[hit],
+			event->Cerenkov.Detector.GetGlobalMomentumZ()[hit]);
       //pol.rotateUz(mom.unit());
       polT = pol.unit() * mom.unit();
+      MomMag = mom.mag();
+      PolMag = pol.mag();
+
+      polXraw = (event->Cerenkov.Detector.GetPolarizationX()[hit]);
+      polYraw = (event->Cerenkov.Detector.GetPolarizationY()[hit]);
+      polZraw = (event->Cerenkov.Detector.GetPolarizationZ()[hit]);
+
+      polX = polXraw/PolMag;
+      polY = polYraw/PolMag;
+      polZ = polZraw/PolMag;
 
       x=event->Cerenkov.Detector.GetDetectorGlobalPositionX()[hit];
       y=event->Cerenkov.Detector.GetDetectorGlobalPositionY()[hit];
@@ -198,6 +233,36 @@ void processOne(TTree *QweakSimG4_Tree, TTree *tout, long &nrEvts){
       angX = atan2(sin(_Gtheta)*cos(_Gphi),cos(_Gtheta)) * 180.0 / pi;
       angY = atan2(sin(_Gtheta)*sin(_Gphi),cos(_Gtheta)) * 180.0 / pi;
 
+      momX=tan(angX*pi/180.0)/sqrt(1 + tan(angX*pi/180.0)*tan(angX*pi/180.0) + tan(angY*pi/180.0)*tan(angY*pi/180.0));
+      momY=tan(angY*pi/180.0)/sqrt(1 + tan(angX*pi/180.0)*tan(angX*pi/180.0) + tan(angY*pi/180.0)*tan(angY*pi/180.0));
+      momZ=1/sqrt(1 + tan(angX*pi/180.0)*tan(angX*pi/180.0) + tan(angY*pi/180.0)*tan(angY*pi/180.0));
+
+      theta2=acos(momX*momXi + momY*momYi + momZ*momZi)*180.0/pi;
+
+      ScatterXraw=momYi*momZ - momZi*momY;
+      ScatterYraw=-1.0*(momXi*momZ - momZi*momX);
+      ScatterZraw=momXi*momY - momYi*momX;
+
+      ScatterMag=sqrt(ScatterXraw*ScatterXraw + ScatterYraw*ScatterYraw + ScatterZraw*ScatterZraw);
+
+      ScatX=ScatterXraw/ScatterMag;
+      ScatY=ScatterYraw/ScatterMag;
+      ScatZ=ScatterZraw/ScatterMag;
+
+      SpinXraw=momYi*polZi - momZi*polYi;
+      SpinYraw=-1.0*(momXi*polZi - momZi*polXi);
+      SpinZraw=momXi*polYi - momYi*polXi;
+
+      SpinMag=sqrt(SpinXraw*SpinXraw + SpinYraw*SpinYraw + SpinZraw*SpinZraw);
+
+      SpinX=SpinXraw/SpinMag;
+      SpinY=SpinYraw/SpinMag;
+      SpinZ=SpinZraw/SpinMag;
+
+      phi2sgn=(momXi*(polYi*ScatZ - polZi*ScatY) - momYi*(polXi*ScatZ - polZi*ScatX) + momZi*(polXi*ScatY - polYi*ScatX))/abs(momXi*(polYi*ScatZ - polZi*ScatY) - momYi*(polXi*ScatZ - polZi*ScatX) + momZi*(polXi*ScatY - polYi*ScatX));
+
+      phi2=phi2sgn*acos((polXi*ScatX + polYi*ScatY + polZi*ScatZ)/SpinMag)*180.0/pi;
+
       tout->Fill();
     }//nhit
   }//tree entries
@@ -205,20 +270,23 @@ void processOne(TTree *QweakSimG4_Tree, TTree *tout, long &nrEvts){
 }
 
 void readInitial(string fnm){
-  xI.clear();yI.clear();zI.clear();aXi.clear();aYi.clear();polI.clear();
+  xI.clear();yI.clear();zI.clear();aXi.clear();aYi.clear();polXI.clear();polYI.clear();polZI.clear();polI.clear();
 
   string posfnm=fnm.substr(0,fnm.rfind("/")+1)+"positionMomentum.in";
   string polfnm=fnm.substr(0,fnm.rfind("/")+1)+"polarization.in";
   ifstream finpos(posfnm.c_str());
   ifstream finpol(polfnm.c_str());
-  float tmpx,tmpy,tmpz,tmpax,tmpay,tmppx,tmppy;
+  float tmpx,tmpy,tmpz,tmpax,tmpay,tmppx,tmppy,tmppz;
   while(finpos>>tmpx>>tmpy>>tmpz>>tmpax>>tmpay){
-    finpol>>tmppx>>tmppy;
+    finpol>>tmppx>>tmppy>>tmppz;
     xI.push_back(tmpx);
     yI.push_back(tmpy);
     zI.push_back(tmpz);
     aXi.push_back(tmpax);
     aYi.push_back(tmpay);
+    polXI.push_back(tmppx);
+    polYI.push_back(tmppy);
+    polZI.push_back(tmppz);
     polI.push_back(sqrt(pow(tmppx,2)+pow(tmppy,2)));
   }
   finpos.close();

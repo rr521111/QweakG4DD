@@ -3,6 +3,7 @@ LIBS = $(shell root-config --glibs)
 SRCS := \
 	averageModel.cc \
 	src/interpolatePEs.cc
+	src/interpolatePOLs.cc
 
 OFILES := $(addsuffix .o,$(basename $(SRCS)))
 
